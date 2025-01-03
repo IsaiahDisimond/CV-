@@ -1,4 +1,4 @@
-import cv2 as cv
+import cv2 as cv2
 import numpy as np
 from vidgear.gears import CamGear
 from ultralytics import YOLO
@@ -6,12 +6,12 @@ import time
 
 # Define the model and classes of interest
 model = YOLO(r"C:\\Users\\User\\Downloads\\cv_weights_21122024.pt")
-classes_of_interest = ['person', 'handbag', 'paperbag']
+classes_of_interest = ['class1', 'class2']  # Example classes
 colors = {'person': (0, 255, 0), 'handbag': (0, 0, 255), 'paperbag': (255, 0, 0)}  # BGR format
 confidence_thresholds = {'person': 0.5, 'handbag': 0.3, 'paperbag': 0.3}
 
 # Variables for counting and timing
-class_counts = {cls: set() for cls in classes_of_interest}  # Using sets to track unique instances
+class_counts = {cls: [] for cls in classes_of_interest}
 last_count_time = time.time()
 count_interval = 60  # 1 minute interval in seconds
 last_positions = {cls: [] for cls in classes_of_interest}  # Store last known positions of objects
@@ -29,7 +29,7 @@ def on_key(event):
 
 # Non-Maximum Suppression (NMS) function
 def non_max_suppression(boxes, scores, iou_threshold):
-    indices = cv.dnn.NMSBoxes(boxes, scores, score_threshold=0.0, nms_threshold=iou_threshold)
+    indices = cv2.dnn.NMSBoxes(boxes, scores, score_threshold=0.0, nms_threshold=iou_threshold)
     if len(indices) > 0:
         indices = indices.flatten()
     return [boxes[i] for i in indices]
@@ -49,7 +49,11 @@ def is_new_instance(box, cls_name):
     return True
 
 # Main loop for processing frames
-cap = cv.VideoCapture(0)
+cap = cv2.VideoCapture(0)
+
+if not cap.isOpened():
+    print("Error: Could not open video capture.")
+    exit()
 
 while True:
     ret, frame = cap.read()
@@ -57,11 +61,11 @@ while True:
         break
 
     if pause:
-        cv.waitKey(100)
+        cv2.waitKey(100)
         continue
 
     # Resize frame for faster processing
-    frame_resized = cv.resize(frame, (640, 480))
+    frame_resized = cv2.resize(frame, (640, 480))
 
     # Run YOLOv8 inference on the frame
     results = model(frame_resized)
@@ -91,15 +95,15 @@ while True:
         x1, y1, x2, y2 = box.xyxy[0]
         conf = box.conf[0]
         if [int(x1), int(y1), int(x2), int(y2)] in nms_boxes:
-            cv.rectangle(frame_resized, (int(x1), int(y1)), (int(x2), int(y2)), colors[cls_name], 2)
-            cv.putText(frame_resized, f'{cls_name} {instance_id} {conf:.2f}', (int(x1), int(y1) - 10), cv.FONT_HERSHEY_SIMPLEX, 0.5, colors[cls_name], 2)
+            cv2.rectangle(frame_resized, (int(x1), int(y1)), (int(x2), int(y2)), colors[cls_name], 2)
+            cv2.putText(frame_resized, f'{cls_name} {instance_id} {conf:.2f}', (int(x1), int(y1) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, colors[cls_name], 2)
             if is_new_instance([int(x1), int(y1), int(x2), int(y2)], cls_name):
                 class_counts[cls_name].add(instance_id)
                 last_positions[cls_name].append([int(x1), int(y1), int(x2), int(y2)])
 
     # Display the frame
-    cv.imshow('Frame', frame_resized)
-    if cv.waitKey(1) & 0xFF == ord('q'):
+    cv2.imshow('Frame', frame_resized)
+    if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
     # Display counts every minute
@@ -110,4 +114,4 @@ while True:
         last_positions = {cls: [] for cls in classes_of_interest}  # Reset positions
 
 cap.release()
-cv.destroyAllWindows()
+cv2.destroyAllWindows()
