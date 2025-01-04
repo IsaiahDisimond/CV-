@@ -117,7 +117,10 @@ if input_source == '1':
 elif input_source == '2':
     # Ask the user for the video stream source
     video_source = input("Enter video stream URL or local file path: ")
-    stream = CamGear(source=video_source, stream_mode=True, logging=True).start()
+    try:
+        stream = CamGear(source=video_source, stream_mode=True, logging=True).start()
+    except Exception as e:
+        stream = CamGear(source=video_source, stream_mode=False).start()
     while True:
         frame = stream.read()
         if frame is None or exit_program:
